@@ -1,0 +1,67 @@
+{
+  "name": "eslint-plugin-better-unocss",
+  "version": "0.1.0",
+  "description": "ESLint plugin for UnoCSS with tagged template literal support, multiline formatting, and real UnoCSS engine sorting",
+  "author": "Gastonite",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Gastonite/eslint-plugin-better-unocss.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Gastonite/eslint-plugin-better-unocss/issues"
+  },
+  "homepage": "https://github.com/Gastonite/eslint-plugin-better-unocss#readme",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "prepublishOnly": "pnpm lint && pnpm test run && pnpm build",
+    "test": "vitest",
+    "lint": "concurrently --raw 'pnpm:lint:ts' 'pnpm:lint:es'",
+    "lint-fix": "concurrently --raw 'pnpm:lint:ts' 'pnpm:lint:es --fix'",
+    "lint:ts": "tsc --noEmit -p tsconfig.json",
+    "lint:es": "eslint --max-warnings 0"
+  },
+  "dependencies": {
+    "@unocss/config": "^66.6.6",
+    "@unocss/core": "^66.6.6",
+    "synckit": "^0.11.12"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "@types/eslint": "^9.6.1",
+    "@types/estree": "^1.0.8",
+    "@types/node": "^22.10.2",
+    "@typescript-eslint/parser": "^8.56.1",
+    "@typescript-eslint/rule-tester": "^8.56.1",
+    "@unocss/preset-uno": "^66.6.6",
+    "concurrently": "^9.2.1",
+    "eslint": "^9.39.0",
+    "tsup": "^8.5.1",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.56.1",
+    "vitest": "^4.0.18"
+  },
+  "peerDependencies": {
+    "eslint": ">=9.0.0"
+  },
+  "keywords": [
+    "eslint",
+    "eslint-plugin",
+    "unocss",
+    "tailwind",
+    "css",
+    "atomic-css"
+  ],
+  "license": "MIT"
+}
