@@ -1,7 +1,23 @@
 import { RuleTester } from '@typescript-eslint/rule-tester'
+import vueParser from 'vue-eslint-parser'
+
 import { noDuplicateClassesRule } from './noDuplicateClasses'
 
 const ruleTester = new RuleTester()
+
+const jsxRuleTester = new RuleTester({
+  languageOptions: {
+    parserOptions: {
+      ecmaFeatures: { jsx: true },
+    },
+  },
+})
+
+const vueRuleTester = new RuleTester({
+  languageOptions: {
+    parser: vueParser,
+  },
+})
 
 ruleTester.run('no-duplicate-classes', noDuplicateClassesRule as never, {
   valid: [
@@ -30,6 +46,52 @@ ruleTester.run('no-duplicate-classes', noDuplicateClassesRule as never, {
       code: 'cn`p-4 mt-2 p-4`',
       errors: [{ messageId: 'duplicate' }],
       output: 'cn`p-4 mt-2`',
+    },
+  ],
+})
+
+// =============================================================================
+// JSX Tests
+// =============================================================================
+
+jsxRuleTester.run('no-duplicate-classes (JSX)', noDuplicateClassesRule as never, {
+  valid: [
+    { code: '<div className="flex p-4" />' },
+    { code: '<div className={"flex p-4"} />' },
+  ],
+  invalid: [
+    {
+      code: '<div className="flex flex p-4" />',
+      errors: [{ messageId: 'duplicate' }],
+      output: '<div className="flex p-4" />',
+    },
+    {
+      code: '<div className={"flex flex p-4"} />',
+      errors: [{ messageId: 'duplicate' }],
+      output: '<div className={"flex p-4"} />',
+    },
+  ],
+})
+
+// =============================================================================
+// Vue Tests
+// =============================================================================
+
+vueRuleTester.run('no-duplicate-classes (Vue)', noDuplicateClassesRule as never, {
+  valid: [
+    { code: '<template><div class="flex p-4"></div></template>' },
+    { code: `<template><div :class="'flex p-4'"></div></template>` },
+  ],
+  invalid: [
+    {
+      code: '<template><div class="flex flex p-4"></div></template>',
+      errors: [{ messageId: 'duplicate' }],
+      output: '<template><div class="flex p-4"></div></template>',
+    },
+    {
+      code: `<template><div :class="'flex flex p-4'"></div></template>`,
+      errors: [{ messageId: 'duplicate' }],
+      output: `<template><div :class="'flex p-4'"></div></template>`,
     },
   ],
 })

@@ -1,9 +1,23 @@
 import { RuleTester } from '@typescript-eslint/rule-tester'
+import vueParser from 'vue-eslint-parser'
+
 import { noUnknownClassesRule } from './noUnknownClasses'
 
-
-
 const ruleTester = new RuleTester()
+
+const jsxRuleTester = new RuleTester({
+  languageOptions: {
+    parserOptions: {
+      ecmaFeatures: { jsx: true },
+    },
+  },
+})
+
+const vueRuleTester = new RuleTester({
+  languageOptions: {
+    parser: vueParser,
+  },
+})
 
 ruleTester.run('no-unknown-classes', noUnknownClassesRule as never, {
   valid: [
@@ -55,6 +69,52 @@ ruleTester.run('no-unknown-classes', noUnknownClassesRule as never, {
     // Typo in common class
     {
       code: 'cn("flx items-center")',
+      errors: [{ messageId: 'unknown' }],
+    },
+  ],
+})
+
+// =============================================================================
+// JSX Tests
+// =============================================================================
+
+jsxRuleTester.run('no-unknown-classes (JSX)', noUnknownClassesRule as never, {
+  valid: [
+    { code: '<div className="flex p-4" />' },
+    { code: '<div className={"flex p-4"} />' },
+    // Object index fallback
+    { code: '<div className={sizes[props.size ?? "md"]} />' },
+  ],
+  invalid: [
+    {
+      code: '<div className="not-a-class" />',
+      errors: [{ messageId: 'unknown' }],
+    },
+    {
+      code: '<div className={"flx items-center"} />',
+      errors: [{ messageId: 'unknown' }],
+    },
+  ],
+})
+
+// =============================================================================
+// Vue Tests
+// =============================================================================
+
+vueRuleTester.run('no-unknown-classes (Vue)', noUnknownClassesRule as never, {
+  valid: [
+    { code: '<template><div class="flex p-4"></div></template>' },
+    { code: `<template><div :class="'flex p-4'"></div></template>` },
+    // Object index fallback
+    { code: `<template><div :class="sizes[props.size ?? 'md']"></div></template>` },
+  ],
+  invalid: [
+    {
+      code: '<template><div class="not-a-class"></div></template>',
+      errors: [{ messageId: 'unknown' }],
+    },
+    {
+      code: `<template><div :class="'flx items-center'"></div></template>`,
       errors: [{ messageId: 'unknown' }],
     },
   ],

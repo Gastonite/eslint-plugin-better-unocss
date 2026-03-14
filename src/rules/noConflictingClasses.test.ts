@@ -1,9 +1,23 @@
 import { RuleTester } from '@typescript-eslint/rule-tester'
+import vueParser from 'vue-eslint-parser'
+
 import { noConflictingClassesRule } from './noConflictingClasses'
 
-
-
 const ruleTester = new RuleTester()
+
+const jsxRuleTester = new RuleTester({
+  languageOptions: {
+    parserOptions: {
+      ecmaFeatures: { jsx: true },
+    },
+  },
+})
+
+const vueRuleTester = new RuleTester({
+  languageOptions: {
+    parser: vueParser,
+  },
+})
 
 ruleTester.run('no-conflicting-classes', noConflictingClassesRule as never, {
   valid: [
@@ -57,6 +71,52 @@ ruleTester.run('no-conflicting-classes', noConflictingClassesRule as never, {
       code: 'cn("flex block text-red-500 text-blue-500")',
       errors: [{ messageId: 'conflict' }, { messageId: 'conflict' }],
       output: 'cn("block text-blue-500")',
+    },
+  ],
+})
+
+// =============================================================================
+// JSX Tests
+// =============================================================================
+
+jsxRuleTester.run('no-conflicting-classes (JSX)', noConflictingClassesRule as never, {
+  valid: [
+    { code: '<div className="flex items-center" />' },
+    { code: '<div className={"flex hover:block"} />' },
+  ],
+  invalid: [
+    {
+      code: '<div className="flex block" />',
+      errors: [{ messageId: 'conflict' }],
+      output: '<div className="block" />',
+    },
+    {
+      code: '<div className={"text-red-500 text-blue-500"} />',
+      errors: [{ messageId: 'conflict' }],
+      output: '<div className={"text-blue-500"} />',
+    },
+  ],
+})
+
+// =============================================================================
+// Vue Tests
+// =============================================================================
+
+vueRuleTester.run('no-conflicting-classes (Vue)', noConflictingClassesRule as never, {
+  valid: [
+    { code: '<template><div class="flex items-center"></div></template>' },
+    { code: `<template><div :class="'flex hover:block'"></div></template>` },
+  ],
+  invalid: [
+    {
+      code: '<template><div class="flex block"></div></template>',
+      errors: [{ messageId: 'conflict' }],
+      output: '<template><div class="block"></div></template>',
+    },
+    {
+      code: `<template><div :class="'text-red-500 text-blue-500'"></div></template>`,
+      errors: [{ messageId: 'conflict' }],
+      output: `<template><div :class="'text-blue-500'"></div></template>`,
     },
   ],
 })
