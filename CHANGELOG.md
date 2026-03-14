@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.4.0
+
+### Added
+
+- New option `expandVariantGroups` for `enforce-line-wrapping` (default: `false`)
+  - When `true`, applies `classesPerLine` inside variant groups, expanding them to multiline
+  - When `false` (default), variant groups are treated as a single class unit
+  ```typescript
+  // With expandVariantGroups: true, classesPerLine: 1
+  // Before
+  hover:(bg-red text-white outline-none)
+
+  // After
+  hover:(
+    bg-red
+    text-white
+    outline-none
+  )
+  ```
+
+### Fixed
+
+- `printWidth` no longer applies when `classesPerLine` constraint is already satisfied
+- Long variant groups no longer trigger false positives
+
+---
+
 ## 0.3.0
 
 ### Changed

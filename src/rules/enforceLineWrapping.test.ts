@@ -34,6 +34,17 @@ ruleTester.run('enforce-line-wrapping', enforceLineWrappingRule as never, {
 \``,
       options: [{ classesPerLine: 1 }],
     },
+    // Expanded variant group format is valid
+    {
+      code: `cn\`
+  flex
+  hover:(
+    bg-red
+    text-white
+  )
+\``,
+      options: [{ classesPerLine: 1, expandVariantGroups: true }],
+    },
   ],
   invalid: [
     {
@@ -122,6 +133,68 @@ ruleTester.run('enforce-line-wrapping', enforceLineWrappingRule as never, {
       output: `cn\`
   flex
   gap-1
+\``,
+    },
+
+    // Variant group without expansion (default) - variant group stays intact
+    {
+      code: 'cn`flex hover:(bg-red text-white outline-none)`',
+      options: [{ classesPerLine: 1 }],
+      errors: [{ messageId: 'incorrectWrapping' }],
+      output: `cn\`
+  flex
+  hover:(bg-red text-white outline-none)
+\``,
+    },
+
+    // Variant group with single class - no expansion needed
+    {
+      code: 'cn`flex hover:(bg-red)`',
+      options: [{ classesPerLine: 1 }],
+      errors: [{ messageId: 'incorrectWrapping' }],
+      output: `cn\`
+  flex
+  hover:(bg-red)
+\``,
+    },
+
+    // Variant group with expandVariantGroups: true - expand to multiline
+    {
+      code: 'cn`flex hover:(bg-red text-white outline-none)`',
+      options: [{ classesPerLine: 1, expandVariantGroups: true }],
+      errors: [{ messageId: 'incorrectWrapping' }],
+      output: `cn\`
+  flex
+  hover:(
+    bg-red
+    text-white
+    outline-none
+  )
+\``,
+    },
+
+    // Variant group with classesPerLine: 2 + expandVariantGroups - expand when > 2 inner classes
+    {
+      code: 'cn`flex hover:(bg-red text-white outline-none)`',
+      options: [{ classesPerLine: 2, expandVariantGroups: true }],
+      errors: [{ messageId: 'incorrectWrapping' }],
+      output: `cn\`
+  flex hover:(
+    bg-red
+    text-white
+    outline-none
+  )
+\``,
+    },
+
+    // Variant group with classesPerLine: 2 - no expansion when <= 2 inner classes
+    {
+      code: 'cn`flex mt-2 gap-1 hover:(bg-red text-white)`',
+      options: [{ classesPerLine: 2 }],
+      errors: [{ messageId: 'incorrectWrapping' }],
+      output: `cn\`
+  flex mt-2
+  gap-1 hover:(bg-red text-white)
 \``,
     },
   ],

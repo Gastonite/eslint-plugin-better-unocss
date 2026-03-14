@@ -8,6 +8,17 @@ ruleTester.run('order', orderRule as never, {
     { code: 'cn("p-4")' },
     { code: 'cn("")' },
     { code: 'otherFn("mt-2 p-4")' }, // not a tracked function
+    // Expanded variant groups - correctly ordered, should not error
+    {
+      code: `cn\`
+  flex
+  p-4
+  hover:(
+    bg-red
+    text-white
+  )
+\``,
+    },
   ],
   invalid: [
     {

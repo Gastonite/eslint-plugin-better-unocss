@@ -259,17 +259,57 @@ const isVueLiteralNode = (node: ESBaseNode): node is AST.VLiteral => (
 // Matcher Functions
 // =============================================================================
 
+/**
+ * Check if a node is an indexed access literal.
+ * Also handles cases like sizes[props.size ?? 'md'] where the string is inside an expression used as index.
+ */
 const isIndexedAccessLiteral = (node: ESNode): boolean => {
 
   if (!hasESNodeParentExtension(node))
     return false
 
-  if (node.parent.type !== 'MemberExpression')
+  // Direct case: sizes['md']
+  if (node.parent.type === 'MemberExpression') {
+
+    const memberExpr = node.parent as ESNode & { property: ESNode; computed: boolean }
+
+    return memberExpr.property === node && memberExpr.computed
+  }
+
+  // Indirect case: sizes[props.size ?? 'md'] or sizes[condition || 'md']
+  // The string is inside an expression (LogicalExpression) that is used as index
+  if (
+    node.parent.type === 'LogicalExpression' ||
+    node.parent.type === 'ConditionalExpression'
+  )
+    return isInsideMemberExpressionProperty(node.parent)
+
+  return false
+}
+
+/**
+ * Check if a node is used as the computed property of a MemberExpression.
+ */
+const isInsideMemberExpressionProperty = (node: ESNode): boolean => {
+
+  if (!hasESNodeParentExtension(node))
     return false
 
-  const memberExpr = node.parent as ESNode & { property: ESNode }
+  if (node.parent.type === 'MemberExpression') {
 
-  return memberExpr.property === node
+    const memberExpr = node.parent as ESNode & { property: ESNode; computed: boolean }
+
+    return memberExpr.property === node && memberExpr.computed
+  }
+
+  // Keep going up through logical/conditional expressions
+  if (
+    node.parent.type === 'LogicalExpression' ||
+    node.parent.type === 'ConditionalExpression'
+  )
+    return isInsideMemberExpressionProperty(node.parent)
+
+  return false
 }
 
 const getVueMatcherFunctions = (matchers: Array<SelectorMatcher>): MatcherFunctions<ESBaseNode> => (

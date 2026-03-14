@@ -28,6 +28,37 @@ export type OrderOptions = RuleOptionsWithSelectors
 const isMultiline = (content: string): boolean => content.includes('\n')
 
 /**
+ * Check if content has expanded variant groups (multiline variant groups).
+ */
+const hasExpandedVariantGroups = (content: string): boolean => (
+
+  (/:\(\s*\n/).test(content)
+)
+
+/**
+ * Collapse expanded variant groups back to single-line format.
+ * e.g., "hover:(\n  bg-red\n  text-white\n)" -> "hover:(bg-red text-white)"
+ */
+const collapseExpandedVariantGroups = (content: string): string => {
+
+  // Match variant group opening, inner content, and closing
+  // Pattern: prefix:(\n  inner\n  classes\n)
+  const pattern = /(\S+:\()\s*\n([\s\S]*?)\n\s*\)/g
+
+  return content.replace(pattern, (_match, prefix, inner) => {
+
+    // Collapse inner content to single line
+    const collapsed = inner
+      .split('\n')
+      .map((line: string) => line.trim())
+      .filter((line: string) => line.length > 0)
+      .join(' ')
+
+    return `${prefix}${collapsed})`
+  })
+}
+
+/**
  * Detect the indentation used in multiline content.
  */
 const detectIndentation = (content: string): string => {
@@ -180,8 +211,13 @@ export const orderRule = createRule<'unordered', OrderOptions>({
 
       const content = literal.content
 
+      // Collapse expanded variant groups before normalizing
+      const collapsed = hasExpandedVariantGroups(content)
+        ? collapseExpandedVariantGroups(content)
+        : content
+
       // Normalize: trim and collapse whitespace to single spaces
-      const normalized = content.trim().split(/\s+/).filter(c => c.length > 0).join(' ')
+      const normalized = collapsed.trim().split(/\s+/).filter(c => c.length > 0).join(' ')
 
       // Skip empty or single-class content
       if (!normalized || !normalized.includes(' '))
@@ -189,19 +225,32 @@ export const orderRule = createRule<'unordered', OrderOptions>({
 
       const sorted = sort(normalized)
 
-      // Build the expected formatted output
-      const multiline = isMultiline(content)
-      const indentation = multiline
-        ? detectIndentation(content)
-        : ''
+      // For expanded variant groups, just compare the order (not format)
+      // The format is handled by enforce-line-wrapping
+      const hasExpanded = hasExpandedVariantGroups(content)
 
-      const formatted = multiline
-        ? formatMultiline(sorted, indentation)
-        : sorted
+      if (hasExpanded) {
 
-      // Compare with original content to catch both order and formatting issues
-      if (content === formatted)
-        continue
+        // Just compare order - if same order, no error
+        if (normalized === sorted)
+          continue
+      }
+      else {
+
+        // Build the expected formatted output
+        const multiline = isMultiline(content)
+        const indentation = multiline
+          ? detectIndentation(content)
+          : ''
+
+        const formatted = multiline
+          ? formatMultiline(sorted, indentation)
+          : sorted
+
+        // Compare with original content to catch both order and formatting issues
+        if (content === formatted)
+          continue
+      }
 
       ctx.report({
         loc: literal.loc,

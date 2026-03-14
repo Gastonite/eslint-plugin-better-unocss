@@ -20,6 +20,11 @@ ruleTester.run('no-unknown-classes', noUnknownClassesRule as never, {
     // Empty or whitespace only
     { code: 'cn("")' },
     { code: 'cn("  ")' },
+
+    // Object index with fallback - should not lint the fallback value
+    { code: 'const x = sizes[props.size ?? "md"]' },
+    { code: 'cn(sizes[props.size ?? "md"])' },
+    { code: 'cn(obj[condition || "fallback"])' },
   ],
 
   invalid: [
