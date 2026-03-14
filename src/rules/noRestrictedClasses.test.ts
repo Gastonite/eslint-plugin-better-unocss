@@ -1,9 +1,23 @@
 import { RuleTester } from '@typescript-eslint/rule-tester'
+import vueParser from 'vue-eslint-parser'
+
 import { noRestrictedClassesRule } from './noRestrictedClasses'
 
-
-
 const ruleTester = new RuleTester()
+
+const jsxRuleTester = new RuleTester({
+  languageOptions: {
+    parserOptions: {
+      ecmaFeatures: { jsx: true },
+    },
+  },
+})
+
+const vueRuleTester = new RuleTester({
+  languageOptions: {
+    parser: vueParser,
+  },
+})
 
 ruleTester.run('no-restricted-classes', noRestrictedClassesRule as never, {
   valid: [
@@ -123,6 +137,58 @@ ruleTester.run('no-restricted-classes', noRestrictedClassesRule as never, {
       }],
       errors: [{ messageId: 'restricted' }, { messageId: 'restricted' }],
       output: 'cn("container text-success")',
+    },
+  ],
+})
+
+// =============================================================================
+// JSX Tests
+// =============================================================================
+
+jsxRuleTester.run('no-restricted-classes (JSX)', noRestrictedClassesRule as never, {
+  valid: [
+    {
+      code: '<div className="flex p-4" />',
+      options: [{ restrict: ['container'] }],
+    },
+  ],
+  invalid: [
+    {
+      code: '<div className="flex container" />',
+      options: [{ restrict: ['container'] }],
+      errors: [{ messageId: 'restricted' }],
+    },
+    {
+      code: '<div className={"text-green-500"} />',
+      options: [{ restrict: [{ pattern: '^text-green-500$', fix: 'text-success' }] }],
+      errors: [{ messageId: 'restricted' }],
+      output: '<div className={"text-success"} />',
+    },
+  ],
+})
+
+// =============================================================================
+// Vue Tests
+// =============================================================================
+
+vueRuleTester.run('no-restricted-classes (Vue)', noRestrictedClassesRule as never, {
+  valid: [
+    {
+      code: '<template><div class="flex p-4"></div></template>',
+      options: [{ restrict: ['container'] }],
+    },
+  ],
+  invalid: [
+    {
+      code: '<template><div class="flex container"></div></template>',
+      options: [{ restrict: ['container'] }],
+      errors: [{ messageId: 'restricted' }],
+    },
+    {
+      code: `<template><div :class="'text-green-500'"></div></template>`,
+      options: [{ restrict: [{ pattern: '^text-green-500$', fix: 'text-success' }] }],
+      errors: [{ messageId: 'restricted' }],
+      output: `<template><div :class="'text-success'"></div></template>`,
     },
   ],
 })

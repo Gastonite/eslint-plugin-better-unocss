@@ -201,6 +201,37 @@ ruleTester.run('enforce-line-wrapping', enforceLineWrappingRule as never, {
 })
 
 // =============================================================================
+// indent Tests
+// =============================================================================
+
+ruleTester.run('enforce-line-wrapping (indent)', enforceLineWrappingRule as never, {
+  valid: [],
+  invalid: [
+    // indent: 4 spaces
+    {
+      code: 'cn`flex gap-1`',
+      options: [{ classesPerLine: 1, indent: 4 }],
+      errors: [{ messageId: 'incorrectWrapping' }],
+      output: `cn\`
+    flex
+    gap-1
+\``,
+    },
+
+    // indent: 'tab'
+    {
+      code: 'cn`flex gap-1`',
+      options: [{ classesPerLine: 1, indent: 'tab' }],
+      errors: [{ messageId: 'incorrectWrapping' }],
+      output: `cn\`
+\tflex
+\tgap-1
+\``,
+    },
+  ],
+})
+
+// =============================================================================
 // printWidth Tests
 // =============================================================================
 

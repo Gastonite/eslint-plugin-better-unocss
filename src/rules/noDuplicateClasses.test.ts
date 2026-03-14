@@ -25,6 +25,10 @@ ruleTester.run('no-duplicate-classes', noDuplicateClassesRule as never, {
     { code: 'cn("p-4")' },
     { code: 'clsx("p-4", "mt-2")' },
     { code: 'cn`p-4 mt-2 flex`' },
+
+    // Different variants = NOT duplicates
+    { code: 'cn("flex hover:flex")' },
+    { code: 'cn("text-red hover:text-red focus:text-red")' },
   ],
   invalid: [
     {
@@ -46,6 +50,13 @@ ruleTester.run('no-duplicate-classes', noDuplicateClassesRule as never, {
       code: 'cn`p-4 mt-2 p-4`',
       errors: [{ messageId: 'duplicate' }],
       output: 'cn`p-4 mt-2`',
+    },
+
+    // Same variant = duplicate
+    {
+      code: 'cn("hover:flex hover:flex")',
+      errors: [{ messageId: 'duplicate' }],
+      output: 'cn("hover:flex")',
     },
   ],
 })

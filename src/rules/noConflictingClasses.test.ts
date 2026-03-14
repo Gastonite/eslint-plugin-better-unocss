@@ -72,6 +72,9 @@ ruleTester.run('no-conflicting-classes', noConflictingClassesRule as never, {
       errors: [{ messageId: 'conflict' }, { messageId: 'conflict' }],
       output: 'cn("block text-blue-500")',
     },
+
+    // TODO: Variant group with conflicts inside - not yet implemented
+    // { code: 'cn("hover:(flex block)")' },
   ],
 })
 
