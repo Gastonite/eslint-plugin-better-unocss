@@ -60,14 +60,48 @@ export const getContent = (
 // Class Manipulation
 // =============================================================================
 
+/**
+ * Split class string into individual classes, respecting variant groups.
+ * e.g., "flex hover:(bg-red text-white)" -> ["flex", "hover:(bg-red text-white)"]
+ */
 export const splitClasses = (classes: string): Array<string> => {
 
   if (classes.trim() === '')
     return []
 
-  return classes
-    .trim()
-    .split(/\s+/)
+  const result: Array<string> = []
+  let current = ''
+  let parenDepth = 0
+
+  for (const char of classes) {
+
+    if (char === '(') {
+
+      parenDepth++
+      current += char
+    }
+    else if (char === ')') {
+
+      parenDepth--
+      current += char
+    }
+    else if ((/\s/).test(char) && parenDepth === 0) {
+
+      if (current.trim())
+        result.push(current.trim())
+
+      current = ''
+    }
+    else {
+
+      current += char
+    }
+  }
+
+  if (current.trim())
+    result.push(current.trim())
+
+  return result
 }
 
 /**

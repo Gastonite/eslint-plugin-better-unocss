@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.0
+
+### Changed
+
+- Variant groups `hover:(...)` are now only expanded if `transformerVariantGroup` is in user's UnoCSS config
+- `no-unknown-classes` and `no-conflicting-classes` respect user's transformer configuration
+
+### Fixed
+
+- `splitClasses` correctly parses variant groups like `hover:(bg-red text-white)`
+
+---
+
 ## 0.2.0
 
 ### New Rules

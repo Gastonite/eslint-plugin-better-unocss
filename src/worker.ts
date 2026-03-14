@@ -260,7 +260,13 @@ const actionConflicts = async (
   if (!uno.config.details)
     uno.config.details = true
 
-  const tokens = classes.split(/\s+/g).filter(Boolean)
+  // Only expand variant groups if the transformer is enabled
+  const shouldExpand = hasVariantGroupTransformer(uno)
+  const toValidate = shouldExpand
+    ? parseVariantGroup(classes).expanded
+    : classes
+
+  const tokens = toValidate.split(/\s+/g).filter(Boolean)
 
   // Map: "signature" -> [{ className, properties }, ...]
   const signatureMap = new Map<string, Array<{ className: string; properties: Array<string> }>>()
@@ -339,6 +345,16 @@ const actionConflicts = async (
 }
 
 /**
+ * Check if transformerVariantGroup is enabled in config.
+ */
+const hasVariantGroupTransformer = (uno: UnoGenerator): boolean => {
+
+  const transformers = uno.config.transformers ?? []
+
+  return transformers.some(t => t.name === '@unocss/transformer-variant-group')
+}
+
+/**
  * Worker action: validate classes (find unknown ones).
  */
 const actionValidate = async (
@@ -348,7 +364,14 @@ const actionValidate = async (
 ): Promise<Array<string>> => {
 
   const uno = await getGenerator(configPath, id)
-  const tokens = classes.split(/\s+/g).filter(Boolean)
+
+  // Only expand variant groups if the transformer is enabled
+  const shouldExpand = hasVariantGroupTransformer(uno)
+  const toValidate = shouldExpand
+    ? parseVariantGroup(classes).expanded
+    : classes
+
+  const tokens = toValidate.split(/\s+/g).filter(Boolean)
   const unknown: Array<string> = []
 
   for (const token of tokens) {
