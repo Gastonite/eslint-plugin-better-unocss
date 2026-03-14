@@ -1,24 +1,23 @@
 # eslint-plugin-better-unocss
 
-ESLint plugin for UnoCSS with tagged template literal support and real UnoCSS engine sorting.
+[![npm version](https://img.shields.io/npm/v/eslint-plugin-better-unocss.svg)](https://www.npmjs.com/package/eslint-plugin-better-unocss)
+[![license](https://img.shields.io/npm/l/eslint-plugin-better-unocss.svg)](./LICENSE)
+
+ESLint plugin for UnoCSS with real engine sorting, tagged template literals, and powerful formatting rules.
 
 ## Why?
 
-The official `@unocss/eslint-plugin` has limitations:
-- No support for tagged template literals (`cn`...``)
-- No multiline formatting preservation
-- No support for function calls like `cn('...')`
+The official `@unocss/eslint-plugin` only detects class strings in `class="..."` attributes.
 
-This plugin solves all of these while using the **same UnoCSS sorting engine** as the official plugin.
+This plugin **also detects** classes in:
 
-## Features
+- Tagged templates: `` cn`flex items-center` ``
+- Function calls: `cn('flex items-center')`
+- Multiline strings with proper formatting
 
-- **UnoCSS engine sorting** — Uses `@unocss/core` for identical ordering to the official plugin
-- **Tagged template literals** — Supports `cn`...``, `tw`...``, etc.
-- **Function calls** — Supports `cn('...')`, `clsx('...')`, `cva('...')`, etc.
-- **Multiline preservation** — Maintains one-class-per-line formatting
-- **Variant groups** — Handles `hover:(bg-red-500 text-white)` correctly
-- **Additional rules** — Duplicate detection, whitespace normalization, line wrapping
+Plus additional rules for conflict detection, unknown class detection, and class restrictions.
+
+Uses the **same UnoCSS sorting engine** as the official plugin.
 
 ## Installation
 
@@ -26,188 +25,212 @@ This plugin solves all of these while using the **same UnoCSS sorting engine** a
 pnpm add -D eslint-plugin-better-unocss
 ```
 
-## Usage
+## Quick Start
 
 ```typescript
 // eslint.config.ts
 import { configs } from 'eslint-plugin-better-unocss'
 
 export default [
-  // Default: only order rule
-  configs.flat,
-
-  // Or strict: all rules enabled
-  configs.strict,
-
-  // Disable official plugin order (same engine, redundant)
-  {
-    rules: {
-      'unocss/order': 'off',
-    },
-  },
+  configs.recommended,
 ]
 ```
 
 ## Rules
 
-### `better-unocss/order` (enabled by default)
+| Rule | Description | Fixable |
+|------|-------------|---------|
+| [`order`](./docs/rules/order.md) | Sort classes using UnoCSS engine | Yes |
+| [`no-duplicate-classes`](./docs/rules/no-duplicate-classes.md) | Disallow duplicate classes | Yes |
+| [`no-conflicting-classes`](./docs/rules/no-conflicting-classes.md) | Disallow classes that set the same CSS property | Yes |
+| [`no-unknown-classes`](./docs/rules/no-unknown-classes.md) | Disallow classes not recognized by UnoCSS | No |
+| [`no-restricted-classes`](./docs/rules/no-restricted-classes.md) | Disallow specific class patterns | Yes |
+| [`no-unnecessary-whitespace`](./docs/rules/no-unnecessary-whitespace.md) | Normalize whitespace in class strings | Yes |
+| [`enforce-line-wrapping`](./docs/rules/enforce-line-wrapping.md) | Enforce consistent multiline formatting | Yes |
 
-Sorts classes using the UnoCSS engine.
+## Configuration
 
-```typescript
-// Before
-cn`text-sm bg-red-500 flex px-4`
+### `configs.recommended`
 
-// After
-cn`text-sm px-4 bg-red-500 flex`
-```
+Recommended config with sensible defaults:
 
-Supports:
-- Tagged templates: `cn`...``, `tw`...``, `clsx`...``, `classnames`...``
-- Function calls: `cn('...')`, `clsx('...')`, `classnames('...')`, `twMerge('...')`, `cva('...')`
-
-Options:
 ```typescript
 {
-  'better-unocss/order': ['error', {
-    tags: ['tw', 'cn', 'clsx', 'classnames'],
-    functions: ['cn', 'clsx', 'classnames', 'twMerge', 'cva'],
-  }]
-}
-```
+  // Stylistic (warn)
+  'better-unocss/order': 'warn',
+  'better-unocss/no-unnecessary-whitespace': 'warn',
 
-### `better-unocss/no-duplicate-classes` (opt-in)
-
-Removes duplicate classes.
-
-```typescript
-// Before
-cn`flex px-4 flex text-sm`
-
-// After
-cn`flex px-4 text-sm`
-```
-
-### `better-unocss/no-unnecessary-whitespace` (opt-in)
-
-Normalizes whitespace in class strings.
-
-```typescript
-// Before
-cn('flex   px-4  text-sm')
-
-// After
-cn('flex px-4 text-sm')
-```
-
-Options:
-```typescript
-{
-  'better-unocss/no-unnecessary-whitespace': ['error', {
-    allowMultiline: true, // default
-  }]
-}
-```
-
-### `better-unocss/enforce-line-wrapping` (opt-in)
-
-Forces consistent line wrapping in tagged templates.
-
-```typescript
-// Before
-cn`flex px-4 text-sm bg-red-500`
-
-// After (classesPerLine: 1)
-cn`
-  flex
-  px-4
-  text-sm
-  bg-red-500
-`
-```
-
-Options:
-```typescript
-{
-  'better-unocss/enforce-line-wrapping': ['error', {
-    classesPerLine: 1,
-    indent: '  ',
-  }]
-}
-```
-
-## Configs
-
-### `configs.flat` (default)
-
-Only enables the `order` rule:
-```typescript
-{
-  'better-unocss/order': 'error',
-}
-```
-
-### `configs.strict`
-
-Enables all rules:
-```typescript
-{
-  'better-unocss/order': 'error',
+  // Correctness (error)
+  'better-unocss/no-conflicting-classes': 'error',
   'better-unocss/no-duplicate-classes': 'error',
-  'better-unocss/no-unnecessary-whitespace': 'error',
-  'better-unocss/enforce-line-wrapping': ['error', { classesPerLine: 1 }],
+  'better-unocss/no-unknown-classes': 'error',
 }
 ```
 
-## How It Works
+### Manual Configuration
 
-### UnoCSS Engine Integration
+```typescript
+// eslint.config.ts
+import { rules } from 'eslint-plugin-better-unocss'
 
-The plugin uses `synckit` to run the async UnoCSS engine synchronously in ESLint:
+export default [
+  {
+    plugins: {
+      'better-unocss': { rules },
+    },
+    rules: {
+      'better-unocss/order': 'error',
+      'better-unocss/no-duplicate-classes': 'error',
+      'better-unocss/no-conflicting-classes': 'error',
+      'better-unocss/no-unknown-classes': 'error',
+      'better-unocss/no-unnecessary-whitespace': 'error',
+      'better-unocss/no-restricted-classes': ['error', {
+        restrict: ['hidden'],
+      }],
+      'better-unocss/enforce-line-wrapping': ['error', {
+        classesPerLine: 1,
+        printWidth: 80,
+        indent: 2,
+        group: 'newLine',
+      }],
+    },
+  },
+]
+```
 
-1. Loads your `uno.config.ts` via `@unocss/config`
-2. Creates a `UnoGenerator` via `@unocss/core`
-3. Parses each class token to get its rule order
-4. Sorts by rule order, then alphabetically
-5. Handles variant groups (`hover:(...)`) via `parseVariantGroup`/`collapseVariantGroup`
+## Features
 
-This ensures **identical sorting** to the official `@unocss/eslint-plugin`.
+### Tagged Template Literals
 
-### Multiline Preservation
+```tsx
+// Fully supported
+cn`flex items-center gap-4`
+tw`hover:bg-red-500 focus:ring`
+clsx`p-4 mt-2`
+```
 
-When fixing multiline tagged templates:
-1. Normalizes content (collapse whitespace)
-2. Sorts with UnoCSS engine
-3. Parses result keeping variant groups as single tokens
-4. Formats with one class per line, preserving indentation
+### Function Calls
+
+```tsx
+// All arguments are linted
+cn('flex items-center')
+clsx('p-4', condition && 'mt-2')
+cva('base-class', { variants: { size: { sm: 'text-sm' } } })
+```
 
 ### Variant Groups
 
-UnoCSS variant groups like `hover:(bg-red-500 text-white)` are:
-1. Expanded by UnoCSS for sorting
-2. Collapsed back after sorting
-3. Kept as single tokens in multiline formatting
+```tsx
+// Handled correctly
+cn`hover:(bg-red-500 text-white) dark:(bg-gray-800)`
+```
+
+### Multiline Formatting
+
+```tsx
+// Before
+cn`flex items-center justify-between gap-4 px-8 py-4`
+
+// After (with enforce-line-wrapping)
+cn`
+  flex
+  items-center
+  justify-between
+  gap-4
+  px-8
+  py-4
+`
+```
+
+### Conflict Detection
+
+```tsx
+// Error: Conflicting classes for display: flex, block
+cn`flex block items-center`
+
+// OK: Different variants = no conflict
+cn`flex hover:block`
+```
+
+## Framework Support
+
+| Framework | Status |
+|-----------|--------|
+| ES/JS/TS | Supported |
+| Vue SFC | Supported |
+| JSX/TSX | Supported |
+
+### Vue Example
+
+```vue
+<template>
+  <!-- Static class -->
+  <div class="flex items-center" />
+
+  <!-- Dynamic binding -->
+  <div :class="'flex items-center'" />
+  <div :class="{ 'flex': true, 'hidden': isHidden }" />
+</template>
+
+<script setup>
+// Script expressions
+const classes = cn`flex items-center`
+</script>
+```
+
+### JSX Example
+
+```tsx
+// Static className
+<div className="flex items-center" />
+
+// Expression
+<div className={cn`flex items-center`} />
+<div className={cn('flex', condition && 'hidden')} />
+```
+
+## Supported Callees
+
+Out of the box, the plugin detects:
+
+- `cn`, `clsx`, `classnames`, `cva`, `tv`
+- `twMerge`, `twJoin`, `cc`
+- `class`, `className` attributes
+
+Custom selectors can be configured per-rule.
 
 ## Conflicts with Official Plugin
 
-If you use both plugins, disable the official `order` rule:
+If you use both plugins, disable the official order rule:
 
 ```typescript
 {
   rules: {
-    'unocss/order': 'off', // Use better-unocss/order instead
+    'unocss/order': 'off',
   }
 }
 ```
 
 Both use the same UnoCSS engine, so keeping both causes circular fixes.
 
-## Limitations
+## TypeScript Support
 
-- **Function calls with multiple args**: `cn('a', 'b', 'c')` — Each arg has one class, nothing to sort
-- **Dynamic classes**: `cn(condition ? 'a' : 'b')` — Cannot analyze runtime values
-- **Template expressions**: `cn`${foo} bar`` — Skipped (has expressions)
+Full TypeScript support with exported types:
+
+```typescript
+import type {
+  BetterUnocssRules,
+  OrderOptions,
+  EnforceLineWrappingOptions,
+  NoRestrictedClassesOptions,
+  // ... other option types
+} from 'eslint-plugin-better-unocss'
+```
 
 ## License
 
-MIT
+[MIT](./LICENSE)
+
+## Credits
+
+Inspired by [eslint-plugin-better-tailwindcss](https://github.com/schoero/eslint-plugin-better-tailwindcss).

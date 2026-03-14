@@ -1,17 +1,23 @@
-import { type Rule } from 'eslint'
-import { type CallExpression, type Literal, type TaggedTemplateExpression } from 'estree'
+/**
+ * Rule: no-duplicate-classes
+ * Disallow duplicate CSS classes.
+ */
+
+import type { Literal } from '../types/literal'
+import { createRule, type RuleOptionsWithSelectors } from '../utils/createRule'
 
 
 
-type RuleOptions = {
-  tags: Array<string>
-  functions: Array<string>
-}
+// =============================================================================
+// Types
+// =============================================================================
 
-const DEFAULT_OPTIONS: RuleOptions = {
-  tags: ['tw', 'cn', 'clsx', 'classnames'],
-  functions: ['cn', 'clsx', 'classnames', 'twMerge', 'cva'],
-}
+export type NoDuplicateClassesOptions = RuleOptionsWithSelectors
+
+
+// =============================================================================
+// Helpers
+// =============================================================================
 
 /**
  * Parse content into classes, handling variant groups.
@@ -28,17 +34,20 @@ const parseClasses = (content: string): Array<string> => {
 
       parenDepth++
       current += char
-    } else if (char === ')') {
+    }
+    else if (char === ')') {
 
       parenDepth--
       current += char
-    } else if ((/\s/).test(char) && parenDepth === 0) {
+    }
+    else if ((/\s/).test(char) && parenDepth === 0) {
 
       if (current.trim())
         classes.push(current.trim())
 
       current = ''
-    } else {
+    }
+    else {
 
       current += char
     }
@@ -89,7 +98,54 @@ const removeDuplicates = (classes: Array<string>): Array<string> => {
   return result
 }
 
-export const noDuplicateClassesRule: Rule.RuleModule = {
+/**
+ * Format the fixed literal with deduplicated classes.
+ */
+const formatFixedLiteral = (literal: Literal, uniqueClasses: Array<string>): string => {
+
+  const content = literal.content
+  const multiline = content.includes('\n')
+
+  if (!multiline) {
+
+    const quote = literal.openingQuote ?? '"'
+    return quote + uniqueClasses.join(' ') + quote
+  }
+
+  // Preserve multiline format
+  const lines = content.split('\n')
+  let indentation = '  '
+
+  for (const line of lines) {
+
+    const match = line.match(/^(\s+)\S/)
+    if (match?.[1]) {
+
+      indentation = match[1]
+      break
+    }
+  }
+
+  const baseIndent = indentation.startsWith('  ')
+    ? indentation.slice(2)
+    : indentation.startsWith('\t')
+      ? indentation.slice(1)
+      : ''
+
+  const quote = literal.openingQuote ?? '"'
+  const formatted = '\n' + uniqueClasses.map(c => indentation + c).join('\n') + '\n' + baseIndent
+
+  return quote + formatted + quote
+}
+
+
+// =============================================================================
+// Rule
+// =============================================================================
+
+export const noDuplicateClassesRule = createRule<'duplicate', NoDuplicateClassesOptions>({
+  name: 'no-duplicate-classes',
+
   meta: {
     type: 'problem',
     docs: {
@@ -101,15 +157,9 @@ export const noDuplicateClassesRule: Rule.RuleModule = {
       {
         type: 'object',
         properties: {
-          tags: {
+          selectors: {
             type: 'array',
-            items: { type: 'string' },
-            default: DEFAULT_OPTIONS.tags,
-          },
-          functions: {
-            type: 'array',
-            items: { type: 'string' },
-            default: DEFAULT_OPTIONS.functions,
+            description: 'Custom selectors configuration',
           },
         },
         additionalProperties: false,
@@ -120,132 +170,30 @@ export const noDuplicateClassesRule: Rule.RuleModule = {
     },
   },
 
-  create(context) {
+  defaultOptions: {},
 
-    const options: RuleOptions = {
-      ...DEFAULT_OPTIONS,
-      ...context.options[0],
-    }
+  lintLiterals(ctx, literals, _options) {
 
-    const tagSet = new Set(options.tags)
-    const functionSet = new Set(options.functions)
+    for (const literal of literals) {
 
-    const isStringLiteral = (node: CallExpression['arguments'][number]): node is Literal & { value: string } => (
+      const classes = parseClasses(literal.content)
+      const duplicates = findDuplicates(classes)
 
-      node.type === 'Literal' && typeof node.value === 'string'
-    )
+      if (duplicates.length === 0)
+        continue
 
-    const getFunctionName = (callee: CallExpression['callee']): string | undefined => {
+      ctx.report({
+        loc: literal.loc,
+        messageId: 'duplicate',
+        data: { className: duplicates.join(', ') },
+        fix(fixer) {
 
-      if (callee.type === 'Identifier')
-        return callee.name
+          const unique = removeDuplicates(classes)
+          const fixed = formatFixedLiteral(literal, unique)
 
-      if (callee.type === 'MemberExpression' && callee.property.type === 'Identifier')
-        return callee.property.name
-
-      return undefined
-    }
-
-    return {
-      CallExpression(node: CallExpression) {
-
-        const functionName = getFunctionName(node.callee)
-        if (!functionName || !functionSet.has(functionName))
-          return
-
-        for (const arg of node.arguments) {
-
-          if (!isStringLiteral(arg))
-            continue
-
-          const classes = parseClasses(arg.value)
-          const duplicates = findDuplicates(classes)
-
-          if (duplicates.length === 0)
-            continue
-
-          context.report({
-            node: arg,
-            messageId: 'duplicate',
-            data: { className: duplicates.join(', ') },
-            fix(fixer) {
-
-              const unique = removeDuplicates(classes)
-              const quote = arg.raw?.startsWith('\'')
-                ? '\''
-                : '"'
-
-              return fixer.replaceText(arg, quote + unique.join(' ') + quote)
-            },
-          })
-        }
-      },
-
-      TaggedTemplateExpression(node: TaggedTemplateExpression) {
-
-        const tag = node.tag
-        let tagName: string | undefined
-
-        if (tag.type === 'Identifier')
-          tagName = tag.name
-        else if (tag.type === 'MemberExpression' && tag.property.type === 'Identifier')
-          tagName = tag.property.name
-
-        if (!tagName || !tagSet.has(tagName))
-          return
-
-        if (node.quasi.expressions.length > 0)
-          return
-
-        const quasi = node.quasi.quasis[0]
-        if (!quasi)
-          return
-
-        const content = quasi.value.raw
-        const classes = parseClasses(content)
-        const duplicates = findDuplicates(classes)
-
-        if (duplicates.length === 0)
-          return
-
-        const multiline = content.includes('\n')
-
-        context.report({
-          node,
-          messageId: 'duplicate',
-          data: { className: duplicates.join(', ') },
-          fix(fixer) {
-
-            const unique = removeDuplicates(classes)
-
-            if (!multiline)
-              return fixer.replaceText(quasi, '`' + unique.join(' ') + '`')
-
-            // Preserve multiline format
-            const lines = content.split('\n')
-            let indentation = '  '
-
-            for (const line of lines) {
-
-              const match = line.match(/^(\s+)\S/)
-              if (match?.[1]) {
-
-                indentation = match[1]
-                break
-              }
-            }
-
-            const baseIndent = indentation.startsWith('  ')
-              ? indentation.slice(2)
-              : indentation.startsWith('\t')
-                ? indentation.slice(1)
-                : ''
-
-            const formatted = '\n' + unique.map(c => indentation + c).join('\n') + '\n' + baseIndent
-            return fixer.replaceText(quasi, '`' + formatted + '`')
-          },
-        })
-      },
+          return fixer.replaceTextRange(literal.range, fixed)
+        },
+      })
     }
   },
-}
+})
