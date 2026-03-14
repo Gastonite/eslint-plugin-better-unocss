@@ -22,8 +22,15 @@
 
 ### Fixed
 
-- `printWidth` no longer applies when `classesPerLine` constraint is already satisfied
-- Long variant groups no longer trigger false positives
+- `isIndexedAccessLiteral` to exclude object index fallbacks (`obj[x ?? 'md']`)
+- `order` rule now handles expanded variant groups (collapse before sorting)
+
+### Tests
+
+- Add JSX and Vue tests for all rules (noDuplicateClasses, noConflictingClasses, noUnnecessaryWhitespace, order, noUnknownClasses, noRestrictedClasses)
+- Add indent option tests for enforce-line-wrapping (`indent: 4`, `indent: 'tab'`)
+- Add variant duplicate tests (`hover:flex hover:flex`, `flex hover:flex`)
+- 144 tests total
 
 ---
 
